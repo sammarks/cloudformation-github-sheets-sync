@@ -1,0 +1,70 @@
+service: cloudformation-github-sheets-sync
+plugins:
+  - serverless-sam
+provider:
+  name: aws
+  runtime: nodejs10.x
+  environment:
+    GithubToken:
+      Ref: GithubToken
+    Repository:
+      Ref: Repository
+    Labels:
+      Ref: Labels
+    State:
+      Ref: State
+    GooglePrivateKey:
+      Ref: GooglePrivateKey
+    GoogleClientEmail:
+      Ref: GoogleClientEmail
+    SpreadsheetId:
+      Ref: SpreadsheetId
+    SheetName:
+      Ref: SheetName
+functions:
+  sync:
+    handler: src/sync.handler
+    timeout: 60
+    memory: 512
+    events:
+      - schedule:
+          rate:
+            Ref: UpdateSchedule
+resources:
+  Parameters:
+    UpdateSchedule:
+      Default: cron(0/30 12-23 ? * MON-FRI *) # Every 30 minutes, between 12:00pm (UTC) and 11:00pm (UTC), Monday - Friday.
+      Type: String
+      Description: The CloudWatch ScheduleExpression defining the interval the issues are synced at.
+    GithubToken:
+      Default: ''
+      Type: String
+      Description: The Github Authentication token used for fetching issues.
+    Repository:
+      Default: 'sammarks/cloudformation-github-sheets-sync'
+      Type: String
+      Description: A Github repository to sync, in the format of 'owner/repository'
+    Labels:
+      Default: 'reporting'
+      Type: String
+      Description: A comma-separated list of labels to filter on.
+    State:
+      Default: 'OPEN,CLOSED'
+      Type: String
+      Description: A comma-separated list of states to filter on.
+    GoogleClientEmail:
+      Default: ''
+      Type: String
+      Description: Your service account's email address for Google, to be able to edit the sheet.
+    GooglePrivateKey:
+      Default: ''
+      Type: String
+      Description: Your service account's private key for Google, to be able to edit the sheet.
+    SpreadsheetId:
+      Default: ''
+      Type: String
+      Description: The Google Spreadsheet ID to update.
+    SheetName:
+      Default: 'Github Issues'
+      Type: String
+      Description: The name of the sheet to update inside the spreadsheet.

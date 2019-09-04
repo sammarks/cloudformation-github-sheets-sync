@@ -1,0 +1,39 @@
+{
+  "name": "cloudformation-github-sheets-sync",
+  "version": "0.0.1",
+  "description": "An AWS CloudFormation template for automatically syncing Github issues to a Google Sheet.",
+  "main": "index.js",
+  "repository": "https://github.com/sammarks/cloudformation-github-sheets-sync",
+  "author": "Sam Marks <sam@sammarks.me>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "lint": "eslint src/*.js test/*.js",
+    "test": "jest --coverage",
+    "report-coverage": "cat ./coverage/lcov.info | coveralls",
+    "release": "standard-version",
+    "deploy": "./deploy-to-s3.sh"
+  },
+  "devDependencies": {
+    "aws-sdk": "^2.522.0",
+    "aws-sdk-mock": "^4.5.0",
+    "coveralls": "^3.0.6",
+    "eslint": "^6.3.0",
+    "eslint-config-standard": "^14.1.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-jest": "^22.16.0",
+    "eslint-plugin-node": "^9.2.0",
+    "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-standard": "^4.0.1",
+    "jest": "^24.9.0",
+    "jest-junit": "^8.0.0",
+    "serverless": "^1.51.0",
+    "serverless-sam": "^0.2.0",
+    "standard-version": "^7.0.0"
+  },
+  "dependencies": {
+    "google-spreadsheet": "^2.0.8",
+    "graphql-request": "^1.8.2",
+    "lodash": "^4.17.15"
+  }
+}
