@@ -23,9 +23,10 @@ Then give the stack a name, and configure it:
 | GithubToken | | The Github Authentication token used for fetching issues. |
 | Repository | `sammarks/cloudformation-github-sheets-sync` | A Github repository to sync, in the format of `owner/repository` |
 | Labels | `reporting` | A comma-separated list of labels to filter on. |
+| BlacklistLabels | `reporting` | A comma-separated list of labels to not include in the spreadsheet. |
 | State | `OPEN,CLOSED` | A comma-separated list of states to filter on. |
 | GoogleClientEmail | | Your service account's email address for Google. |
-| GooglePrivateKey | | Your service account's private key for Google. |
+| GooglePrivateKey | | Your service account's JSON-encoded private key for Google. Should be something like `"-----BEGIN PRIVATE KEY-----\nabddfd..."` |
 | SpreadsheetId | | The spreadsheet ID to update. You can find this from the URL. |
 | SheetName | `Github Issues` | The name of the sheet to update inside the spreadsheet. |
 
@@ -53,7 +54,7 @@ Add something like this underneath resources:
 githubSheetsSyncStack:
   Type: AWS::CloudFormation::Stack
   Properties:
-    TemplateURL: https://sammarks-cf-templates.s3.amazonaws.com/VERSION/template.yaml
+    TemplateURL: https://sammarks-cf-templates.s3.amazonaws.com/github-sheets-sync/VERSION/template.yaml
     Parameters:
       GithubToken: ''
       Repository: ''
@@ -91,7 +92,7 @@ The sync Lambda goes through the following process:
 Each time a release is made in this repository, the corresponding template is available at:
 
 ```
-https://sammarks-cf-templates.s3.amazonaws.com/VERSION/template.yaml
+https://sammarks-cf-templates.s3.amazonaws.com/github-sheets-sync/VERSION/template.yaml
 ```
 
 **On upgrading:** I actually _recommend_ you lock the template you use to a specific version. Then, if you want to update to a new version, all you have to change in your CloudFormation template is the version and AWS will automatically delete the old stack and re-create the new one for you.

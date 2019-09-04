@@ -1,7 +1,6 @@
 const { GraphQLClient } = require('graphql-request')
 const { IssuesQuery } = require('./queries')
-const GoogleSpreadsheet = require('google-spreadsheet')
-const util = require('util')
+const { google } = require('googleapis')
 const get = require('lodash/get')
 
 const {
@@ -9,34 +8,30 @@ const {
   Repository,
   Labels,
   State,
-  GooglePrivateKey,
   GoogleClientEmail,
   SpreadsheetId,
   SheetName
 } = process.env
+const GooglePrivateKey = JSON.parse(process.env.GooglePrivateKey)
+const BlacklistLabels = process.env.BlacklistLabels.split(',').map((label) => label.trim())
 
-const prepareDocumentAndGetSheet = async (doc) => {
-  await util.promisify(doc.useServiceAccountAuth)({
-    client_email: GoogleClientEmail,
-    private_key: GooglePrivateKey
+const getAuth = () => {
+  return new google.auth.GoogleAuth({
+    credentials: {
+      client_email: GoogleClientEmail,
+      private_key: GooglePrivateKey
+    },
+    scopes: 'https://www.googleapis.com/auth/spreadsheets'
   })
-  const info = await util.promisify(doc.getInfo)()
-  const sheet = info.worksheets.find((worksheet) => worksheet.title === SheetName)
-  if (!sheet) {
-    throw new Error(`Cannot find sheet with name '${SheetName}'`)
-  }
-  return sheet
 }
 
 const fetchGithubIssues = async (client, issues = [], after = null) => {
   const data = await client.request(IssuesQuery, {
-    variables: {
-      owner: Repository.split('/')[0],
-      name: Repository.split('/')[1],
-      labels: Labels.split(',').map((label) => label.trim()),
-      states: State.split(',').map((state) => state.trim()),
-      after
-    }
+    owner: Repository.split('/')[0],
+    name: Repository.split('/')[1],
+    labels: Labels.split(',').map((label) => label.trim()),
+    states: State.split(',').map((state) => state.trim()),
+    after
   })
   const edges = get(data, 'repository.issues.edges', [])
   const hasNextPage = edges.length > 0 && get(data, 'repository.issues.pageInfo.hasNextPage')
@@ -51,18 +46,11 @@ const fetchGithubIssues = async (client, issues = [], after = null) => {
   }
 }
 
-const HEADER_CELLS = [
-  { row: 1, col: 'A', value: 'number' },
-  { row: 1, col: 'B', value: 'title' },
-  { row: 1, col: 'C', value: 'state' },
-  { row: 1, col: 'D', value: 'labels' },
-  { row: 1, col: 'E', value: 'repository' }
-]
+const HEADER_CELLS = ['number', 'title', 'state', 'labels', 'repository']
 
 module.exports.handler = async (event) => {
-  const doc = new GoogleSpreadsheet(SpreadsheetId)
-  console.info('Preparing document and getting sheet')
-  const sheet = await prepareDocumentAndGetSheet(doc)
+  const googleAuth = getAuth()
+  const sheets = google.sheets('v4')
   console.info('Fetching Github issues')
   const client = new GraphQLClient('https://api.github.com/graphql', {
     headers: {
@@ -71,20 +59,23 @@ module.exports.handler = async (event) => {
   })
   const issues = await fetchGithubIssues(client)
   console.info(`Found ${issues.length} issues.`)
-  console.info('Clearing sheet')
-  await util.promisify(sheet.clear)()
-  console.info('Inserting new values')
-  const cells = issues.reduce((cells, issue) => {
-    const row = Math.floor(cells.length / HEADER_CELLS.length) + 1
-    const issueCells = [
-      { row, col: 'A', numericValue: parseInt(issue.number, 10) },
-      { row, col: 'B', value: issue.title },
-      { row, col: 'C', value: issue.state },
-      { row, col: 'D', value: issue.labels.join(', ') },
-      { row, col: 'E', value: Repository.split('/')[1] }
-    ]
-    return [...cells, ...issueCells]
-  }, HEADER_CELLS)
-  await util.promisify(sheet.bulkUpdateCells)(cells)
+  console.info('Calculating new values')
+  const cells = [HEADER_CELLS, ...issues.map((issue) => [
+    issue.number,
+    issue.title,
+    issue.state,
+    issue.labels.filter((label) => !BlacklistLabels.includes(label)).join(', '),
+    Repository.split('/')[1]
+  ])]
+  console.info('Updating new values')
+  await sheets.spreadsheets.values.update({
+    auth: googleAuth,
+    spreadsheetId: SpreadsheetId,
+    range: `'${SheetName}'!A1:E2000`,
+    requestBody: {
+      values: cells
+    },
+    valueInputOption: 'USER_ENTERED'
+  })
   console.info('Complete!')
 }

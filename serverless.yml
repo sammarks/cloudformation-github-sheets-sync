@@ -9,6 +9,8 @@ provider:
       Ref: GithubToken
     Repository:
       Ref: Repository
+    BlacklistLabels:
+      Ref: BlacklistLabels
     Labels:
       Ref: Labels
     State:
@@ -48,6 +50,10 @@ resources:
       Default: 'reporting'
       Type: String
       Description: A comma-separated list of labels to filter on.
+    BlacklistLabels:
+      Default: 'reporting'
+      Type: String
+      Description: A comma-separated list of labels to not include in the spreadsheet.
     State:
       Default: 'OPEN,CLOSED'
       Type: String
